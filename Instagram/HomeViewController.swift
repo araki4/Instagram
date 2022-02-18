@@ -7,6 +7,7 @@
 
 import UIKit
 import Firebase
+import SVProgressHUD
 
 class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
@@ -71,13 +72,14 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
         cell.setPostData(postArray[indexPath.row])
         
         // セル内のボタンのアクションをソースコードで設定する
-        cell.likeButton.addTarget(self, action:#selector(handleButton(_:forEvent:)), for: .touchUpInside)
+        cell.likeButton.addTarget(self, action:#selector(handleLikeButton(_:forEvent:)), for: .touchUpInside)
+        cell.commentButton.addTarget(self, action:#selector(handleCommentButton(_:forEvent:)), for: .touchDown)
 
         return cell
     }
     
-    // セル内のボタンがタップされた時に呼ばれるメソッド
-    @objc func handleButton(_ sender: UIButton, forEvent event: UIEvent) {
+    // セル内のLikeボタンがタップされた時に呼ばれるメソッド
+    @objc func handleLikeButton(_ sender: UIButton, forEvent event: UIEvent) {
         print("DEBUG_PRINT: likeボタンがタップされました。")
 
         // タップされたセルのインデックスを求める
@@ -102,6 +104,44 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
             // likesに更新データを書き込む
             let postRef = Firestore.firestore().collection(Const.PostPath).document(postData.id)
             postRef.updateData(["likes": updateValue])
+        }
+    }
+    
+    // セル内のCommentボタンがタップされた時に呼ばれるメソッド
+    @objc func handleCommentButton(_ sender: UIButton, forEvent event: UIEvent) {
+        print("DEBUG_PRINT: commentボタンがタップされました。")
+
+        // タップされたセルのインデックスを求める
+        let touch = event.allTouches?.first
+        let point = touch!.location(in: self.tableView)
+        let indexPath = tableView.indexPathForRow(at: point)
+        
+        // セル内のコメントテキストフィールドを取得
+        let cell = tableView.cellForRow(at: indexPath!) as! PostTableViewCell
+        
+        let comment = cell.commentTextField.text
+
+        print(comment!)
+        
+        if comment != "" {
+            // likesに更新データを書き込む
+            if let myid = Auth.auth().currentUser?.uid {
+
+                // HUDで投稿処理中の表示を開始
+                SVProgressHUD.show()
+                let postDic = [
+                  "uid": myid,
+                  "comment": comment!,
+                  "date": FieldValue.serverTimestamp(),
+                  ] as [String : Any]
+                
+                // 配列からタップされたインデックスのデータを取り出す
+                let postData = postArray[indexPath!.row]
+                
+                let postRef = Firestore.firestore().collection(Const.PostPath).document(postData.id).collection(Const.CommentPath).document()
+                postRef.setData(postDic)
+                SVProgressHUD.showSuccess(withStatus: "投稿しました")
+            }
         }
     }
 
