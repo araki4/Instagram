@@ -125,12 +125,16 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
         
         if comment != "" {
             // likesに更新データを書き込む
-            if let myid = Auth.auth().currentUser?.uid {
+            if let user = Auth.auth().currentUser {
 
+                let userName = user.displayName
+                let myid = user.uid
+                
                 // HUDで投稿処理中の表示を開始
                 SVProgressHUD.show()
                 let postDic = [
                   "uid": myid,
+                  "userName": userName!,
                   "comment": comment!,
                   "date": FieldValue.serverTimestamp(),
                   ] as [String : Any]
@@ -141,6 +145,7 @@ class HomeViewController: UIViewController, UITableViewDataSource, UITableViewDe
                 let postRef = Firestore.firestore().collection(Const.PostPath).document(postData.id).collection(Const.CommentPath).document()
                 postRef.setData(postDic)
                 SVProgressHUD.showSuccess(withStatus: "投稿しました")
+                cell.commentTextField.text = ""
             }
         }
     }
